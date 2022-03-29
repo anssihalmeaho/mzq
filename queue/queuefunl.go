@@ -22,9 +22,69 @@ func InitQueue(interpreter *funl.Interpreter) (err error) {
 			Name:   "getq",
 			Getter: GetGetQ,
 		},
+		{
+			Name:   "getq-nw",
+			Getter: GetGetQNW,
+		},
+		{
+			Name:   "putq-nw",
+			Getter: GetPutQNW,
+		},
 	}
 	err = std.SetSTDFunctions(topFrame, stdModuleName, stdFuncs, interpreter)
 	return
+}
+
+// GetPutQNW puts value to queue (no waiting if full)
+func GetPutQNW(name string) std.StdFuncType {
+	return func(frame *funl.Frame, arguments []funl.Value) (retVal funl.Value) {
+		if l := len(arguments); l != 2 {
+			funl.RunTimeError2(frame, "%s: wrong amount of arguments (%d), need two", name, l)
+		}
+		if arguments[0].Kind != funl.OpaqueValue {
+			funl.RunTimeError2(frame, "%s: requires opaque value", name)
+		}
+
+		que := arguments[0].Data.(*OpaqueQueue)
+		isFull := que.q.PutNoWait(arguments[1])
+		retVal = funl.Value{Kind: funl.BoolValue, Data: isFull}
+		return
+	}
+}
+
+// GetGetQNW gets value from queue (no waiting)
+func GetGetQNW(name string) std.StdFuncType {
+	return func(frame *funl.Frame, arguments []funl.Value) (retVal funl.Value) {
+		if l := len(arguments); l != 1 {
+			funl.RunTimeError2(frame, "%s: wrong amount of arguments (%d), need one", name, l)
+		}
+		if arguments[0].Kind != funl.OpaqueValue {
+			funl.RunTimeError2(frame, "%s: requires opaque value", name)
+		}
+
+		que := arguments[0].Data.(*OpaqueQueue)
+		val, hasAny := que.q.GetNoWait()
+
+		var value funl.Value
+		if hasAny {
+			value = val.(funl.Value)
+		} else {
+			value = funl.Value{
+				Kind: funl.StringValue,
+				Data: "",
+			}
+		}
+
+		values := []funl.Value{
+			{
+				Kind: funl.BoolValue,
+				Data: hasAny,
+			},
+			value,
+		}
+		retVal = funl.MakeListOfValues(frame, values)
+		return
+	}
 }
 
 // GetGetQ gets value from queue

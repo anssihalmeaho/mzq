@@ -77,6 +77,46 @@ func (q *Queue) Put(v interface{}) {
 	q.lock.Unlock()
 }
 
+// PutNoWait puts value to queue but does not wait if its full
+func (q *Queue) PutNoWait(v interface{}) (isFull bool) {
+	q.lock.Lock()
+	if q.state == full {
+		q.lock.Unlock()
+		isFull = true
+		return
+	}
+
+	q.items[q.tail] = v
+	q.tail = (q.tail + 1) % q.size
+	if q.tail == q.head {
+		q.state = full
+	} else {
+		q.state = middle
+	}
+	q.lock.Unlock()
+	return
+}
+
+// GetNoWait gets value from queue without waiting (if its empty)
+func (q *Queue) GetNoWait() (v interface{}, hasAny bool) {
+	q.lock.Lock()
+	if q.state == empty {
+		q.lock.Unlock()
+		return
+	}
+
+	v = q.items[q.head]
+	q.head = (q.head + 1) % q.size
+	if q.tail == q.head {
+		q.state = empty
+	} else {
+		q.state = middle
+	}
+	q.lock.Unlock()
+	hasAny = true
+	return
+}
+
 /*
 //Get gets value from queue
 func (q *Queue) Get() (v interface{}, found bool) {
