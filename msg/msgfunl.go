@@ -261,7 +261,7 @@ func getCreateServer(name string) std.StdFuncType {
 			funl.RunTimeError2(frame, "%s: requires map value", name)
 		}
 
-		options := optionsToGoMap(frame, name, arguments[0])
+		options := OptionsToGoMap(frame, name, arguments[0])
 		address, addrFound := options["addr"]
 		if !addrFound {
 			funl.RunTimeError2(frame, "%s: addr not given in options", name)
@@ -275,7 +275,8 @@ func getCreateServer(name string) std.StdFuncType {
 	}
 }
 
-func optionsToGoMap(frame *funl.Frame, name string, mapVal funl.Value) map[string]interface{} {
+// OptionsToGoMap converts name-value map from FunL to Go
+func OptionsToGoMap(frame *funl.Frame, name string, mapVal funl.Value) map[string]interface{} {
 	keyvals := funl.HandleKeyvalsOP(frame, []*funl.Item{&funl.Item{Type: funl.ValueItem, Data: mapVal}})
 	kvListIter := funl.NewListIterator(keyvals)
 	resultMap := map[string]interface{}{}
@@ -290,7 +291,21 @@ func optionsToGoMap(frame *funl.Frame, name string, mapVal funl.Value) map[strin
 		if keyv.Kind != funl.StringValue {
 			funl.RunTimeError2(frame, "%s: header key not a string: %v", name, keyv)
 		}
-		resultMap[keyv.Data.(string)] = valv.Data
+		switch valv.Kind {
+		case funl.ListValue:
+			resultlist := []string{}
+			lit := funl.NewListIterator(valv)
+			for {
+				nextv := lit.Next()
+				if nextv == nil {
+					break
+				}
+				resultlist = append(resultlist, nextv.Data.(string))
+			}
+			resultMap[keyv.Data.(string)] = resultlist
+		default:
+			resultMap[keyv.Data.(string)] = valv.Data
+		}
 	}
 	return resultMap
 }

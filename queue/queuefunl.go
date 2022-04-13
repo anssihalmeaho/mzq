@@ -141,6 +141,11 @@ type OpaqueQueue struct {
 	q *Queue
 }
 
+// GetQinside ...
+func (oq *OpaqueQueue) GetQinside() *Queue {
+	return oq.q
+}
+
 // TypeName ...
 func (oq *OpaqueQueue) TypeName() string {
 	return "queue"
