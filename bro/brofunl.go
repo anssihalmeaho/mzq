@@ -189,6 +189,7 @@ func GetClose(name string) std.StdFuncType {
 		}
 		broker := arguments[0].Data.(*OpaqueBroker)
 		broker.bro.Close()
+		retVal = funl.Value{Kind: funl.BoolValue, Data: true}
 		return
 	}
 }
