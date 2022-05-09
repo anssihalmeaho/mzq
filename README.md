@@ -87,11 +87,154 @@ call(mzqbro.close <opaque:broker>) -> true
 
 ## queue package / mzqque module
 
-TBD.
+Queues are FIFO type of value buffers which have limited length.
+Queues can be accessed concurrently from several goroutines/fibers.
+In Go values in queue are of **any** (**interface{}**) -type and in
+FunL those are any FunL values.
+There are services which block caller or return immediately in case:
+
+* caller is reading and queue is empty
+* caller is writing and queue is full
+
+Queues can be used locally as independent service or as part of
+messaging with **bro/mzqbro**.
+
+### new-queue
+Creates new queue with given size.
+
+Format:
+
+```
+call(mzqque.new-queue <queue-size: int>) -> <opaque:queue>
+```
+
+### putq
+Writes value to queue. Blocks caller if queue is full.
+
+Format:
+
+```
+call(mzqque.putq <opaque:queue> <value>) -> true
+```
+
+### getq
+Reads value from queue. Blocks caller if queue is empty.
+
+Format:
+
+```
+call(mzqque.getq <opaque:queue>) -> <value>
+```
+### putq-nw
+Writes value to queue. Does not block caller if queue is full.
+
+Format:
+
+```
+call(mzqque.putq-nw <opaque:queue> <value>) -> <was-value-added:bool>
+```
+
+Return value is:
+
+* **true** if value was added to queue (queue was not full)
+* **false** if value was not added to queue (queue was full)
+
+### getq-nw
+Reads value from queue. Does not block caller if queue is empty.
+
+Format:
+
+```
+call(mzqque.getq-nw <opaque:queue>) -> list(<has-value:bool> <value>)
+```
+
+Return value is list of:
+
+1. Boolean value which is **true** if has some value read from queue, **false** if not
+2. Value from queue ('' if value was not read from queue)
 
 ## msg package / mzqmsg module
 
-TBD.
+Basic messaging service provides services to create and use point-to-point
+messaging connections hiding socket communication behind interface.
+TCP protocol is used as implementation for messaging.
+
+**Note.** this package/module is lower level when compared to **bro/mzqbro**
+package/module and is not needed if broker used.
+
+### create-server
+Creates new messaging server for handling several messaging connections.
+Options map need to be given as argument.
+
+Options map contains:
+
+Name | Value
+---- | -----
+'addr' | own address (specifying port, like ':8081')
+
+Format:
+
+```
+call(mzqmsg.create-server <options:map>) -> <opaque:msg-server>
+```
+
+### open-connection
+Opens new point-to-point connection. Target address is given as 2nd argument.
+
+Format:
+
+```
+call(mzqmsg.open-connection <opaque:msg-server> <target-address:string>) -> list
+```
+
+Return list contains:
+
+1. bool: **true** if succeeded, **false** if failed
+2. error text (string)
+3. Opaque connection value
+
+### receive
+Receives message arriving into server (from any connection).
+Blocks caller until message is received.
+
+Format:
+
+```
+call(mzqmsg.receive <opaque:msg-server>) -> list
+```
+Return list contains:
+
+1. bool: **true** if message is received, **false** if not
+2. error text (string)
+3. Message value (map)
+
+Message is represented as map:
+
+Name | Value
+---- | -----
+'from-addr' | address from where message was received (string)
+'data' | message data as string (can be changed to bytearray)
+
+**Note.** 'from-addr' can be used for opening connection to that address.
+
+### msend
+Sends message to given connection. Message data is given
+as string (can be changed from bytearray to string) in 2nd argument.
+
+Format:
+
+```
+call(mzqmsg.msend <opaque:connection> <data:string>) -> list(<ok:bool> <error-text:string>)
+```
+
+### close
+Closes connection.
+
+Format:
+
+```
+call(mzqmsg.close <opaque:connection>) -> true
+```
 
 ## Installation
 There are several ways to take **mzq** into use.
